@@ -1,15 +1,15 @@
 (() => {
   let utm = {};
-  let fbp = "NOT_AVAILABLE";
-  let fbc = "NOT_AVAILABLE";
+  let fbp = 'NOT_AVAILABLE';
+  let fbc = 'NOT_AVAILABLE';
   let userHasScrolled = false;
   let dynamicDeeplink = null;
   let anonId;
   const ctaTypeMap = {
-    nav: "NAV_BAR",
-    main: "MAIN_GET_STARTED",
-    bottom: "BOTTOM_GET_STARTED",
-    footer: "FOOTER_APP_STORE_ICON",
+    nav: 'NAV_BAR',
+    main: 'MAIN_GET_STARTED',
+    bottom: 'BOTTOM_GET_STARTED',
+    footer: 'FOOTER_APP_STORE_ICON',
   };
 
   let trackingData = {
@@ -18,59 +18,72 @@
   };
 
   const validHosts = [
-    "www.brightmoney.co",
-    "brightmoney.co",
-    "join.brightmoney.co",
+    'www.brightmoney.co',
+    'brightmoney.co',
+    'join.brightmoney.co',
   ];
 
   let apiBaseUrl = validHosts.includes(window.location.host)
-    ? "https://gateway.brightmoney.co"
-    : "https://gateway-dev.brightmoney.co";
+    ? 'https://gateway.brightmoney.co'
+    : 'https://gateway-dev.brightmoney.co';
 
-  const eventToPixelMapping = {
-    ["LANDING_PAGE_SEEN"]: {
-      ["FB"]: { eventName: "LANDING_PAGE_SEEN" },
-      ["SNAP"]: { eventName: "VIEW_CONTENT" },
-      ["TIKTOK"]: { eventName: "ViewContent" },
-      // ["IMPACT"]: { eventName: 26192 },
-    },
-    ["LANDING_PAGE_INSTALL_APP_CLICK"]: {
-      ["FB"]: { eventName: "LANDING_PAGE_INSTALL_APP_CLICK" },
-      ["SNAP"]: { eventName: "PURCHASE" },
-      ["TIKTOK"]: { eventName: "ClickButton" },
-      // ["IMPACT"]: { eventName: 26193 },
-    },
-  };
+  /**
+   * Creates a randomised 32 digit alphanumeric ID
+   * @returns {String} - alphanumeric UUID
+   */
   function createUUID() {
-    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(
       /[xy]/g,
       function (c) {
         var r = (Math.random() * 16) | 0,
-          v = c == "x" ? r : (r & 0x3) | 0x8;
+          v = c == 'x' ? r : (r & 0x3) | 0x8;
         return v.toString(16);
       }
     );
   }
+
+  /**
+   * Fetches browser cookies
+   * @param {String} name - the cookie name
+   * @returns {String} - the cookie value
+   */
   function getCookie(name) {
-    let cookie = document.cookie.split("; ").reduce((r, v) => {
-      const parts = v.split("=");
+    let cookie = document.cookie.split('; ').reduce((r, v) => {
+      const parts = v.split('=');
       return parts[0] === name ? decodeURIComponent(parts[1]) : r;
-    }, "NOT_AVAILABLE");
+    }, 'NOT_AVAILABLE');
 
     return cookie;
   }
+
+  /**
+   * Validates query param
+   * @param {*} param - the param that's to be validated
+   * @returns {Boolean} - is param valid ?
+   */
   function validateParam(param) {
-    const invalid = [undefined, null, "", "NOT_AVAILABLE", "undefined"];
+    const invalid = [undefined, null, '', 'NOT_AVAILABLE', 'undefined'];
     if (!invalid.includes(param)) {
       return true;
     }
     return false;
   }
+
+  /**
+   * Validates email
+   * @param {String} email
+   * @returns {Boolean} - is email valid ?
+   */
   function isEmailValid(email) {
     const re =
       /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
     return re.test(String(email).toLowerCase());
   }
+
+  /**
+   * Handles API calls
+   * @param {Object} params - Configuration object
+   */
   function callAPI({
     url,
     method,
@@ -83,7 +96,7 @@
         url,
         method,
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         data: JSON.stringify(payload),
         complete: (xhr) => {
@@ -97,15 +110,31 @@
       });
     });
   }
+
+  const eventToPixelMapping = {
+    ['LANDING_PAGE_SEEN']: {
+      ['FB']: { eventName: 'LANDING_PAGE_SEEN' },
+      ['SNAP']: { eventName: 'VIEW_CONTENT' },
+      ['TIKTOK']: { eventName: 'ViewContent' },
+      // ["IMPACT"]: { eventName: 26192 },
+    },
+    ['LANDING_PAGE_INSTALL_APP_CLICK']: {
+      ['FB']: { eventName: 'LANDING_PAGE_INSTALL_APP_CLICK' },
+      ['SNAP']: { eventName: 'PURCHASE' },
+      ['TIKTOK']: { eventName: 'ClickButton' },
+      // ["IMPACT"]: { eventName: 26193 },
+    },
+  };
+
   async function trackFbPixel(eventName) {
     try {
-      if (eventToPixelMapping[eventName]["FB"]) {
+      if (eventToPixelMapping[eventName]['FB']) {
         let anonymousId = await fetchAnonID();
         let fe_eventName =
-          eventToPixelMapping[eventName]["FB"]["eventName"] || eventName;
+          eventToPixelMapping[eventName]['FB']['eventName'] || eventName;
         window.fbq &&
-          fbq("trackCustom", fe_eventName, {
-            utm_source: utm ? utm_source : "gtp",
+          fbq('trackCustom', fe_eventName, {
+            utm_source: utm?.utm_source || 'gtp',
             external_id: anonymousId,
             fbp: fbp,
             fbc: fbc,
@@ -115,44 +144,78 @@
       sendSentryCall(`Page ${page} :: FB Pixel Track`, error);
     }
   }
+
   function trackSnapPixel(eventName) {
     try {
-      if (eventToPixelMapping[eventName]["SNAP"]) {
+      if (eventToPixelMapping[eventName]['SNAP']) {
         let fe_eventName =
-          eventToPixelMapping[eventName]["SNAP"]["eventName"] || eventName;
-        window.snaptr && snaptr("track", fe_eventName);
+          eventToPixelMapping[eventName]['SNAP']['eventName'] || eventName;
+        window.snaptr && snaptr('track', fe_eventName);
       }
     } catch (error) {
       sendSentryCall(`Page ${page} :: Snap Pixel Track`, error);
     }
   }
+
   function trackTiktokPixel(eventName) {
     try {
-      if (eventToPixelMapping[eventName]["TIKTOK"]) {
+      if (eventToPixelMapping[eventName]['TIKTOK']) {
         let fe_eventName =
-          eventToPixelMapping[eventName]["TIKTOK"]["eventName"] || eventName;
+          eventToPixelMapping[eventName]['TIKTOK']['eventName'] || eventName;
         window.ttq && window.ttq.track(fe_eventName);
       }
     } catch (error) {
       sendSentryCall(`Page ${page} :: TikTok Pixel Track`, error);
     }
   }
+
+  async function trackImpactPixel(eventName) {
+    try {
+      if (eventToPixelMapping[eventName]['IMPACT']) {
+        let anonymousId = await fetchAnonID();
+        let fe_eventName =
+          eventToPixelMapping[eventName]['IMPACT']['eventName'] || eventName;
+        window.ire &&
+          ire(
+            'trackConversion',
+            fe_eventName,
+            {
+              orderId: `${anonymousId}_${eventName}`,
+              customerId: anonymousId,
+              customerEmail: '',
+            },
+            {
+              verifySiteDefinitionMatch: true,
+            }
+          );
+      }
+    } catch (error) {
+      sendSentryCall(`Page ${page} :: Impact Pixel Track`, error);
+    }
+  }
+
+  /**
+   * Sends events to various pixels
+   * @param {String} eventName - event name
+   */
   function trackPixel(eventName) {
     try {
       if (eventToPixelMapping[eventName]) {
         trackFbPixel(eventName);
         trackSnapPixel(eventName);
-        // trackImpactPixel(eventName);
+        trackImpactPixel(eventName);
         trackTiktokPixel(eventName);
       }
     } catch (error) {
       sendSentryCall(`Page ${page} :: Track Pixel`, error);
     }
   }
-  function sendSentryCall(statement, error) {
-    window.Sentry &&
-      Sentry.captureException(Error(`${statement} Error: ${error}`));
-  }
+
+  /**
+   * Sends analytics.track calls for Mixpanel
+   * @param {String} name - event name
+   * @param {object} payload - tracking event's payload
+   */
   function sendAnalyticsCall(name, payload) {
     try {
       window.analytics &&
@@ -170,35 +233,55 @@
       sendSentryCall(`${name} event failed.`, error);
     }
   }
+
+  /**
+   * Sends Sentry.captureException calls
+   * @param {String} statement - Statement for the sentry call
+   * @param {Object} error - Error for the sentry call
+   */
+  function sendSentryCall(statement, error) {
+    window.Sentry &&
+      Sentry.captureException(Error(`${statement} Error: ${error}`));
+  }
+
+  /**
+   * Populates the UTM data
+   */
   function populateUTMData() {
     window.location.search
       .substr(1)
-      .split("&")
+      .split('&')
       .forEach(function (item) {
-        utm[item.split("=")[0]] = item.split("=")[1];
+        utm[item.split('=')[0]] = item.split('=')[1];
       });
 
     // Add custom UTM params for the homepage
-    if (page === "homepage") {
-      if (!utm.utm_source) utm.utm_source = "gtp";
-      if (!utm.utm_medium) utm.utm_medium = "org";
+    if (page === 'homepage') {
+      if (!utm.utm_source) utm.utm_source = 'gtp';
+      if (!utm.utm_medium) utm.utm_medium = 'org';
     }
   }
+
   const urlToOpen = async (urlConditions) => {
     if (urlConditions && urlConditions.downloadAppRedir)
       return urlConditions.url;
 
-    if (url === "WEB_URL") return await getWebUrl(urlConditions);
+    if (url === 'WEB_URL') return await getWebUrl(urlConditions);
 
-    if (url === "SINGULAR") return dynamicDeeplink;
+    if (url === 'SINGULAR') return dynamicDeeplink;
 
-    return url || "https://app.brightmoney.co";
+    return url || 'https://app.brightmoney.co';
   };
+
+  /**
+   * Handles button click brhaviour
+   * @param {Object} urlConditions - parameters that alter the final redirection URL
+   */
   async function onButtonClick(urlConditions) {
     let open = await urlToOpen(urlConditions);
 
     // Button Click Event
-    sendAnalyticsCall("LANDING_PAGE_INSTALL_APP_CLICK", {
+    sendAnalyticsCall('LANDING_PAGE_INSTALL_APP_CLICK', {
       appUrl: open,
       page: page,
       ...(utm || {}),
@@ -206,9 +289,15 @@
 
     // window.alert(open);
     setTimeout(() => {
-      window.open(open || "https://app.brightmoney.co", "_self");
+      window.open(open || 'https://app.brightmoney.co', '_self');
     }, 500);
   }
+
+  /**
+   * Creates the redirection URL
+   * @param {Object} urlConditions - parameters that alter the final redirection URL
+   * @returns {URL} - browser url
+   */
   const getWebUrl = async (urlConditions) => {
     let url = `https://dev-app.brightmoney.co/?ft=4&wsv=${wsv ? wsv : 3}`;
     if (validHosts.includes(window.location.host)) {
@@ -220,35 +309,35 @@
       url += `&lp_flow=${LP_FLOW}`;
 
       switch (LP_FLOW) {
-        case "1": // Regular Flow
+        case '1': // Regular Flow
           // No extra params...
           break;
-        case "2": // Skip email flow
-          url += `&skip_email=${skip_email ? "T" : "F"}`;
+        case '2': // Skip email flow
+          url += `&skip_email=${skip_email ? 'T' : 'F'}`;
           break;
-        case "3": // Email on LP flow
-          if (urlConditions && urlConditions.email !== "") {
+        case '3': // Email on LP flow
+          if (urlConditions && urlConditions.email !== '') {
             url += `&returning_user=${
-              urlConditions.returning_user ? "T" : "F"
+              urlConditions.returning_user ? 'T' : 'F'
             }&email=${urlConditions.email}&skip_email=T`;
           } else {
-            url += `&skip_email=${skip_email ? "T" : "F"}`;
+            url += `&skip_email=${skip_email ? 'T' : 'F'}`;
           }
         default: // Do nothing...
       }
     } else {
-      if (skip_email) url += "&lp_flow=2";
-      else "&lp_flow=1";
+      if (skip_email) url += '&lp_flow=2';
+      else '&lp_flow=1';
     }
 
     if (urlConditions && urlConditions.tf_goal)
-      url += `&tf_goal=${urlConditions.tf_goal.split(" ").join("_")}`;
+      url += `&tf_goal=${urlConditions.tf_goal.split(' ').join('_')}`;
 
     // Common params for all flows
     if (validateParam(fbp)) url = url.concat(`&fbp=${fbp}`);
     if (validateParam(fbc)) url = url.concat(`&fbc=${fbc}`);
 
-    if (validateParam("gtp")) url = url.concat(`&utm_source=${"gtp"}`);
+    if (validateParam('gtp')) url = url.concat(`&utm_source=${'gtp'}`);
 
     Object.keys(utm).forEach((item) => {
       if (validateParam(utm[item])) {
@@ -268,202 +357,58 @@
 
     return url;
   };
+
   async function fetchAnonID() {
     try {
       let id = await analytics.user().anonymousId();
       return id;
     } catch (error) {
       sendSentryCall(`Landing Page ${page} Anon Id`, error);
-      return "NOT_AVAILABLE";
+      return 'NOT_AVAILABLE';
     }
   }
-  async function sendLogCall(payload) {
-    const anonymousID = await fetchAnonID();
-    let resp;
 
-    if (page === "homepage") payload.referrer = document.referrer;
-
-    try {
-      let lpFlow;
-      if (LP_FLOW) lpFlow = LP_FLOW;
-      else if (skip_email) lpFlow = "2";
-      else lpFlow = "1";
-
-      const logCallData = {
-        anonId: anonymousID,
-        event_name: "LP_CTA_CLICK",
-        event_data: {
-          ...{
-            page,
-            LP_FLOW: LP_FLOW || "1",
-            fbp,
-            fbc,
-            appUrl: url === "WEB_URL" ? "WEBFLOW" : "DEEPLINK",
-          },
-          ...(utm || {}),
-          ...(payload || {}),
-        },
-      };
-
-      let logCallURL =
-        "https://gateway-dev.brightmoney.co/api/v1/eventms/lp/clicks/add/";
-
-      if (validHosts.includes(window.location.host)) {
-        logCallURL =
-          "https://gateway.brightmoney.co/api/v1/eventms/lp/clicks/add/";
-      }
-
-      // LP log evnts call
-      resp = await callAPI({
-        url: logCallURL,
-        method: "POST",
-        payload: logCallData,
-        completeFn: (xhr) => {
-          if (xhr.status === 200) console.log("Log call sent successfully!");
-          sendAnalyticsCall("LP_CTA_CLICK_FE_CALL_COMPLETE", { lp_id: page });
-        },
-        error: (err) => {
-          console.error(err);
-          sendSentryCall(`LP page ${page} LP_CTA_CLICK API call failed.`, err);
-        },
-      });
-    } catch (error) {
-      sendSentryCall("LP_CTA_CLICK call failed.", error);
-    }
-
-    return resp;
-  }
-  function sendPageSeenCall() {
-    fbp = getCookie("_fbp");
-    fbc = getCookie("_fbc");
-
-    // Page Seen Event
-    sendAnalyticsCall(`LANDING_PAGE_${page}_SEEN`, {
-      page: page,
-      ...(utm || {}),
-      fbp,
-      fbc,
-    });
-
-    // Additional Seen event for easy analytics
-    sendAnalyticsCall(`LANDING_PAGE_SEEN`, {
-      page: page,
-      ...(utm || {}),
-      fbp,
-      fbc,
-    });
-  }
-  const getDynamicDeeplink = async () => {
-    const body = {
-      meta: {},
-      data: {
-        utm: {
-          utm_source: utm ? utm_source : "",
-          utm_medium: utm ? utm_medium : "",
-          utm_campaign: utm ? utm_campaign : "",
-          utm_adset: utm ? utm_adset : "",
-          utm_ad: utm ? utm_ad : "",
-          utm_keyword: utm ? utm_keyword : "",
-          utm_content: utm ? utm_content : "",
-        },
-        lp_page: page || "",
-      },
-    };
-
-    const resp = await callAPI({
-      url: `${apiBaseUrl}/api/v1/users/get_deep_link/`,
-      // url: `https://gateway-dev.brightmoney.co/api/v1/users/get_deep_link/`, // For testing purpose
-      method: "POST",
-      payload: body,
-      completeFn: (xhr) => {
-        if (xhr.status === 200) {
-          sendAnalyticsCall("LANDING_PAGE_DYNAMIC_DEEPLINK_FETCHED", {
-            page: page,
-            ...(utm || {}),
-            fbp,
-            fbc,
-            deeplink: xhr.responseJSON.data.deeplink,
-          });
-        }
-      },
-      errorFn: (xhr) => {
-        console.log(xhr);
-      },
-    });
-
-    dynamicDeeplink = resp.data.deeplink;
-  };
-  function setLoadingState(element) {
-    const isAnchorNode = element.nodeName === "A";
-    const isInputNode = element.nodeName === "INPUT";
-    let ogValue;
-
-    // Fetch & save the original value
-    if (isAnchorNode) ogValue = $(element).text();
-    else if (isInputNode) ogValue = $(element).val();
-
-    // Set original text back to the CTA after 3 secs
-    setTimeout(() => {
-      if (isAnchorNode) $(element).text(ogValue);
-      else if (isInputNode) $(element).val(ogValue);
-    }, 3000);
-
-    // Set "Loading..." text
-    if (isAnchorNode) $(element).text("Loading...");
-    else if (isInputNode) $(element).val("Loading...");
-  }
-  function getWaitlistCallURL() {
-    switch (window.location.host) {
-      case "join.brightmoney.co/":
-      case "www.brightmoney.co":
-      case "brightmoney.co":
-        waitlistURL =
-          "https://gateway.brightmoney.co/api/v1/users/waitlist/add/";
-        break;
-      default:
-        waitlistURL =
-          "https://gateway-dev.brightmoney.co/api/v1/users/waitlist/add/";
-    }
-    return waitlistURL;
-  }
+  /**
+   * Registers all DOM events (eg. button clicks)
+   */
   function registerDOMEvents() {
     // Clear the error msg if input is emptied
-    $(".email-input").keyup((event) => {
-      if ($(event.target).val() === "")
-        $(`#${$(event.target).data("err-field")}`).hide();
+    $('.email-input').keyup((event) => {
+      if ($(event.target).val() === '')
+        $(`#${$(event.target).data('err-field')}`).hide();
     });
 
     // Email on LP screen click
-    $(".email-get-started").click(async (event) => {
+    $('.email-get-started').click(async (event) => {
       anonID = await fetchAnonID();
       event.preventDefault();
       event.stopPropagation();
       let logCallPayload = {
         referrer: document.referrer,
       };
-      let ctaPosition = "";
+      let ctaPosition = '';
 
-      sendAnalyticsCall("LP_EMAIL_ENTERED", {
+      sendAnalyticsCall('LP_EMAIL_ENTERED', {
         lp_id: page,
         referrer: document.referrer,
       });
 
       // Determine ctaPosition for homepage
-      if (page === "homepage") {
-        ctaPosition = $(event.target).data("cta-pos");
+      if (page === 'homepage') {
+        ctaPosition = $(event.target).data('cta-pos');
         logCallPayload.cta_position = ctaPosition;
       }
 
       if (
-        !$(event.target).data("input-field") ||
-        $(event.target).data("input-field") === "NA"
+        !$(event.target).data('input-field') ||
+        $(event.target).data('input-field') === 'NA'
       ) {
         // CTA_CLICK click event call (only on homepage)
-        if (page === "homepage") {
+        if (page === 'homepage') {
           // Define payload for CTA_CLICK
           const ctaClickPayload = {
             type: ctaTypeMap[ctaPosition],
-            email_entered: "False",
+            email_entered: 'False',
             referrer: document.referrer,
           };
 
@@ -471,7 +416,7 @@
             ...logCallPayload,
             ...ctaClickPayload,
           });
-          sendAnalyticsCall("CTA_CLICK", ctaClickPayload);
+          sendAnalyticsCall('CTA_CLICK', ctaClickPayload);
         } else {
           const isLogCallComplete = await sendLogCall(logCallPayload);
         }
@@ -481,53 +426,53 @@
         return true;
       }
 
-      const emailValue = $(`#${$(event.target).data("input-field")}`).val();
+      const emailValue = $(`#${$(event.target).data('input-field')}`).val();
       logCallPayload.email = emailValue;
 
       // CTA_CLICK click event call + modify logCall payload (only on homepage)
-      if (page === "homepage") {
+      if (page === 'homepage') {
         // Define payload for CTA_CLICK
         const ctaClickPayload = {
-          type: ctaTypeMap[$(event.target).data("cta-pos")],
-          email_entered: "False",
+          type: ctaTypeMap[$(event.target).data('cta-pos')],
+          email_entered: 'False',
         };
 
         const isLogCallComplete = await sendLogCall(ctaClickPayload);
         console.log(isLogCallComplete);
-        sendAnalyticsCall("CTA_CLICK", ctaClickPayload);
+        sendAnalyticsCall('CTA_CLICK', ctaClickPayload);
       } else {
         const isLogCallComplete = await sendLogCall(logCallPayload);
         console.log(isLogCallComplete);
       }
 
       // Validate email, stop execution if false
-      if (emailValue !== "" && !isEmailValid(emailValue)) {
+      if (emailValue !== '' && !isEmailValid(emailValue)) {
         // Show error message
-        $(`#${$(event.target).data("err-field")}`).show();
+        $(`#${$(event.target).data('err-field')}`).show();
 
         event.preventDefault();
         event.stopPropagation();
         return false;
       } else {
         // Hide error message
-        $(`#${$(event.target).data("err-field")}`).hide();
+        $(`#${$(event.target).data('err-field')}`).hide();
         setLoadingState(event.target);
       }
 
       const anonymousID = await fetchAnonID();
 
-      if (emailValue !== "") {
+      if (emailValue !== '') {
         const payload = {
           meta: {
             bm_request_id: createUUID(),
             bm_session_id: createUUID(),
-            app_version: "1.0-v0",
-            client_source: "web",
-            client_source_meta: "web_v2",
+            app_version: '1.0-v0',
+            client_source: 'web',
+            client_source_meta: 'web_v2',
           },
           data: {
             email: emailValue,
-            email_collected_on: "LP",
+            email_collected_on: 'LP',
             lp_id: page,
             utm: utm || {},
             fb_details: {
@@ -535,12 +480,12 @@
               fbc,
             },
             anonId: anonymousID,
-            lp_type: url === "WEB_URL" ? "WEB_APP" : "APP",
+            lp_type: url === 'WEB_URL' ? 'WEB_APP' : 'APP',
             referrer: document.referrer,
           },
         };
 
-        if (page === "homepage") {
+        if (page === 'homepage') {
           payload.data.referrer = document.referrer;
           payload.data.cta_position = ctaPosition;
         }
@@ -548,7 +493,7 @@
         // User waitlist call
         await callAPI({
           url: getWaitlistCallURL(),
-          method: "POST",
+          method: 'POST',
           payload,
           completeFn: async (xhr) => {
             let urlConditions;
@@ -559,7 +504,7 @@
                 email: emailValue,
               };
 
-              sendAnalyticsCall("INITIATING_LP_EMAIL_NEW_USER_FLOW", {
+              sendAnalyticsCall('INITIATING_LP_EMAIL_NEW_USER_FLOW', {
                 appUrl: await getWebUrl(urlConditions),
                 lp_id: page,
                 ...(utm || {}),
@@ -572,7 +517,7 @@
                 returning_user: true,
                 email: emailValue,
               };
-              sendAnalyticsCall("INITIATING_LP_EMAIL_RETURNING_USER_FLOW", {
+              sendAnalyticsCall('INITIATING_LP_EMAIL_RETURNING_USER_FLOW', {
                 appUrl: await getWebUrl(urlConditions),
                 lp_id: page,
                 ...(utm || {}),
@@ -589,7 +534,7 @@
           },
         });
       } else {
-        sendAnalyticsCall("INITIATING_LP_EMAIL_NOT_ENTERED_FLOW", {
+        sendAnalyticsCall('INITIATING_LP_EMAIL_NOT_ENTERED_FLOW', {
           appUrl: await getWebUrl(),
           lp_id: page,
           ...(utm || {}),
@@ -602,7 +547,20 @@
     });
 
     // Normal get started button clicks
-    $(".button-event").click(async (event) => {
+    $('.button-event').click(async (event) => {
+      // try {
+      //   let buttons = $(event.target);
+      //   Object.keys(buttons).forEach((button) => {
+      //     if (
+      //       buttons[button].innerHTML &&
+      //       buttons[button].innerHTML.length > 0 &&
+      //       buttons[button].innerHTML[0] !== '<'
+      //     )
+      //       buttons[button].innerHTML = 'Loading...';
+      //   });
+      // } catch (error) {
+      //   console.log(error);
+      // }
       try {
         const isLogCallComplete = await sendLogCall({});
         console.log(isLogCallComplete);
@@ -611,14 +569,14 @@
     });
 
     // Engagement LP option selection handler
-    $(".fin-goal-option").click(() => {
+    $('.fin-goal-option').click(() => {
       const optionValue = $(event.target).text();
 
-      $("#fin-goal").text(optionValue);
+      $('#fin-goal').text(optionValue);
     });
 
     // Engagement LP Submit button handler
-    $("#get-prnlized-plan-btn").click(async (event) => {
+    $('#get-prnlized-plan-btn').click(async (event) => {
       anonID = await fetchAnonID();
       event.preventDefault();
       event.stopPropagation();
@@ -627,39 +585,39 @@
       const isLogCallComplete = await sendLogCall({});
       console.log(isLogCallComplete);
 
-      let tf_goal = $(`#${$(event.target).data("input-field")}`).text();
-      if (tf_goal === "Select any one") tf_goal = "NA";
+      let tf_goal = $(`#${$(event.target).data('input-field')}`).text();
+      if (tf_goal === 'Select any one') tf_goal = 'NA';
 
       onButtonClick({ tf_goal });
     });
 
     // Download App CTAs redirection calls
-    $(".download-app-cta").click(async (event) => {
+    $('.download-app-cta').click(async (event) => {
       event.preventDefault();
       event.stopPropagation();
-      const ctaPosition = $(event.target).data("cta-pos");
+      const ctaPosition = $(event.target).data('cta-pos');
 
       const ctaClickPayload = {
         type: ctaTypeMap[ctaPosition],
-        email_entered: "False",
+        email_entered: 'False',
       };
 
       const isLogCallComplete = await sendLogCall(ctaClickPayload);
       console.log(isLogCallComplete);
-      sendAnalyticsCall("CTA_CLICK", ctaClickPayload);
+      sendAnalyticsCall('CTA_CLICK', ctaClickPayload);
 
       onButtonClick({
         downloadAppRedir: true,
-        url: $(event.currentTarget).attr("href"),
+        url: $(event.currentTarget).attr('href'),
       });
     });
 
     // CTA click tracking (implemented from Brand design)
-    $(".tracked-cta").click((event) => {
+    $('.tracked-cta').click((event) => {
       if (
         !(
-          $(event.currentTarget).hasClass("waitlist-cta") ||
-          $(event.currentTarget).hasClass("no-redirection")
+          $(event.currentTarget).hasClass('waitlist-cta') ||
+          $(event.currentTarget).hasClass('no-redirection')
         )
       ) {
         event.preventDefault();
@@ -667,60 +625,60 @@
       }
       let utmContent;
 
-      if ($(event.currentTarget).data("utm_content") === "redir-slug")
-        utmContent = $(event.currentTarget).attr("href");
-      else utmContent = $(event.currentTarget).data("utm_content");
+      if ($(event.currentTarget).data('utm_content') === 'redir-slug')
+        utmContent = $(event.currentTarget).attr('href');
+      else utmContent = $(event.currentTarget).data('utm_content');
 
       const payload = {
-        utm_source: utm ? utm_source : "gtp",
-        utm_medium: utm ? utm_medium : "org",
-        utm_campaign: utm ? utm_campaign : "site",
+        utm_source: utm?.utm_source || 'gtp',
+        utm_medium: utm?.utm_medium || 'org',
+        utm_campaign: utm?.utm_campaign || 'site',
         utm_content: utmContent,
         utm_page: page,
       };
 
-      sendAnalyticsCall("WEBSITE_CTA_CLICK", payload);
+      sendAnalyticsCall('WEBSITE_CTA_CLICK', payload);
 
       if (
         !(
-          $(event.currentTarget).hasClass("waitlist-cta") ||
-          $(event.currentTarget).hasClass("no-redirection") ||
-          $(event.currentTarget).hasClass("email-get-started")
+          $(event.currentTarget).hasClass('waitlist-cta') ||
+          $(event.currentTarget).hasClass('no-redirection') ||
+          $(event.currentTarget).hasClass('email-get-started')
         )
       ) {
         try {
-          if ($(event.currentTarget).attr("href") !== "#")
-            window.open($(event.currentTarget).attr("href"), "_self");
+          if ($(event.currentTarget).attr('href') !== '#')
+            window.open($(event.currentTarget).attr('href'), '_self');
         } catch {
-          window.open("https://bm.sng.link/Du8kf/lte6?_smtype=3", "_self");
+          window.open('https://bm.sng.link/Du8kf/lte6?_smtype=3', '_self');
         }
       }
     });
 
     // School of Money Science page "Join wailist"
-    $(".waitlist-cta").click(async (event) => {
-      console.log("CALLING_API");
+    $('.waitlist-cta').click(async (event) => {
+      console.log('CALLING_API');
       event.preventDefault();
       event.stopPropagation();
-      const emailValue = $(`#${$(event.target).data("input-field")}`).val();
+      const emailValue = $(`#${$(event.target).data('input-field')}`).val();
 
       if (!isEmailValid(emailValue)) {
-        $(`#${$(event.target).data("err-field")}`).fadeIn();
+        $(`#${$(event.target).data('err-field')}`).fadeIn();
         return false;
       } else {
-        $(`#${$(event.target).data("err-field")}`).fadeOut();
+        $(`#${$(event.target).data('err-field')}`).fadeOut();
       }
 
       let anonId = await fetchAnonID();
-      let source = $(event.target).data("waitlist-source");
+      let source = $(event.target).data('waitlist-source');
 
       const waitlistPayload = {
         meta: {
           bm_request_id: createUUID(),
           bm_session_id: createUUID(),
-          app_version: "1.0-v0",
-          client_source: "web",
-          client_source_meta: "web_v2",
+          app_version: '1.0-v0',
+          client_source: 'web',
+          client_source_meta: 'web_v2',
         },
         data: {
           email: emailValue,
@@ -740,27 +698,176 @@
       // User waitlist call
       await callAPI({
         url: getWaitlistCallURL(),
-        method: "POST",
+        method: 'POST',
         payload: waitlistPayload,
         completeFn: async (xhr) => {
           if (xhr.status === 200) {
-            $("#success-modal").fadeIn();
-            $(`#${$(event.target).data("input-field")}`).val("");
+            $('#success-modal').fadeIn();
+            $(`#${$(event.target).data('input-field')}`).val('');
           }
         },
       });
     });
 
     // Handle modal close
-    $("#modal-close").click(() => {
-      $("#success-modal").fadeOut();
+    $('#modal-close').click(() => {
+      $('#success-modal').fadeOut();
     });
   }
+
+  /**
+   * Sends LP log evnts call
+   * @param {Object} payload
+   */
+  async function sendLogCall(payload) {
+    const anonymousID = await fetchAnonID();
+    let resp;
+
+    if (page === 'homepage') payload.referrer = document.referrer;
+
+    try {
+      let lpFlow;
+      if (LP_FLOW) lpFlow = LP_FLOW;
+      else if (skip_email) lpFlow = '2';
+      else lpFlow = '1';
+
+      const logCallData = {
+        anonId: anonymousID,
+        event_name: 'LP_CTA_CLICK',
+        event_data: {
+          ...{
+            page,
+            LP_FLOW: LP_FLOW || '1',
+            fbp,
+            fbc,
+            appUrl: url === 'WEB_URL' ? 'WEBFLOW' : 'DEEPLINK',
+          },
+          ...(utm || {}),
+          ...(payload || {}),
+        },
+      };
+
+      let logCallURL =
+        'https://gateway-dev.brightmoney.co/api/v1/eventms/lp/clicks/add/';
+
+      if (validHosts.includes(window.location.host)) {
+        logCallURL =
+          'https://gateway.brightmoney.co/api/v1/eventms/lp/clicks/add/';
+      }
+
+      // LP log evnts call
+      resp = await callAPI({
+        url: logCallURL,
+        method: 'POST',
+        payload: logCallData,
+        completeFn: (xhr) => {
+          if (xhr.status === 200) console.log('Log call sent successfully!');
+          sendAnalyticsCall('LP_CTA_CLICK_FE_CALL_COMPLETE', { lp_id: page });
+        },
+        error: (err) => {
+          console.error(err);
+          sendSentryCall(`LP page ${page} LP_CTA_CLICK API call failed.`, err);
+        },
+      });
+    } catch (error) {
+      sendSentryCall('LP_CTA_CLICK call failed.', error);
+    }
+
+    return resp;
+  }
+
+  /**
+   * Function that runs on window.onLoad to fetch facebook's meta cookies + send `LANDING_PAGE_${page}_SEEN` call
+   */
+  function sendPageSeenCall() {
+    fbp = getCookie('_fbp');
+    fbc = getCookie('_fbc');
+
+    // Page Seen Event
+    sendAnalyticsCall(`LANDING_PAGE_${page}_SEEN`, {
+      page: page,
+      ...(utm || {}),
+      fbp,
+      fbc,
+    });
+
+    // Additional Seen event for easy analytics
+    sendAnalyticsCall(`LANDING_PAGE_SEEN`, {
+      page: page,
+      ...(utm || {}),
+      fbp,
+      fbc,
+    });
+  }
+
+  const getDynamicDeeplink = async () => {
+    const body = {
+      meta: {},
+      data: {
+        utm: {
+          utm_source: utm?.utm_source || '',
+          utm_medium: utm?.utm_medium || '',
+          utm_campaign: utm?.utm_campaign || '',
+          utm_adset: utm?.utm_adset || '',
+          utm_ad: utm?.utm_ad || '',
+          utm_keyword: utm?.utm_keyword || '',
+          utm_content: utm?.utm_content || '',
+        },
+        lp_page: page || '',
+      },
+    };
+
+    const resp = await callAPI({
+      url: `${apiBaseUrl}/api/v1/users/get_deep_link/`,
+      // url: `https://gateway-dev.brightmoney.co/api/v1/users/get_deep_link/`, // For testing purpose
+      method: 'POST',
+      payload: body,
+      completeFn: (xhr) => {
+        if (xhr.status === 200) {
+          sendAnalyticsCall('LANDING_PAGE_DYNAMIC_DEEPLINK_FETCHED', {
+            page: page,
+            ...(utm || {}),
+            fbp,
+            fbc,
+            deeplink: xhr?.responseJSON?.data?.deeplink,
+          });
+        }
+      },
+      errorFn: (xhr) => {
+        console.log(xhr);
+      },
+    });
+
+    dynamicDeeplink = resp?.data?.deeplink;
+  };
+  function setLoadingState(element) {
+    const isAnchorNode = element.nodeName === 'A';
+    const isInputNode = element.nodeName === 'INPUT';
+    let ogValue;
+
+    // Fetch & save the original value
+    if (isAnchorNode) ogValue = $(element).text();
+    else if (isInputNode) ogValue = $(element).val();
+
+    // Set original text back to the CTA after 3 secs
+    setTimeout(() => {
+      if (isAnchorNode) $(element).text(ogValue);
+      else if (isInputNode) $(element).val(ogValue);
+    }, 3000);
+
+    // Set "Loading..." text
+    if (isAnchorNode) $(element).text('Loading...');
+    else if (isInputNode) $(element).val('Loading...');
+  }
+
+  /**
+   * Init function
+   */
   async function init() {
     populateUTMData();
     registerDOMEvents();
 
-    if (url === "SINGULAR") {
+    if (url === 'SINGULAR') {
       getDynamicDeeplink();
     }
 
@@ -769,29 +876,47 @@
       top: 0,
     });
   }
+
+  function getWaitlistCallURL() {
+    switch (window.location.host) {
+      case 'join.brightmoney.co/':
+      case 'www.brightmoney.co':
+      case 'brightmoney.co':
+        waitlistURL =
+          'https://gateway.brightmoney.co/api/v1/users/waitlist/add/';
+        break;
+      default:
+        waitlistURL =
+          'https://gateway-dev.brightmoney.co/api/v1/users/waitlist/add/';
+    }
+
+    return waitlistURL;
+  }
+
+  // Initialize the Script as soon as the DOM is ready
   $(document).ready(init);
 
   document.onreadystatechange = async () => {
-    if (document.readyState === "complete") {
+    if (document.readyState === 'complete') {
       // Enable the email collection CTAs when page loading is complete
-      $(".email-get-started").removeClass("disabled");
-      $(".button-event").css({ "pointer-events": "unset", opacity: "unset" });
+      $('.email-get-started').removeClass('disabled');
+      $('.button-event').css({ 'pointer-events': 'unset', opacity: 'unset' });
 
       sendPageSeenCall();
 
-      if (url === "REDIRECT") {
+      if (url === 'REDIRECT') {
         let open = dynamicDeeplink;
         let retryCount = 0;
 
         const setDynamicDeeplink = setInterval(async () => {
           open = dynamicDeeplink;
-          console.log("FETCH ", open);
+          console.log('FETCH ', open);
           retryCount += 1;
 
           if (open) {
             clearInterval(setDynamicDeeplink);
             window.location.href =
-              open || "https://app.brightmoney.co/?deeplink_fetched=false";
+              open || 'https://app.brightmoney.co/?deeplink_fetched=false';
           }
 
           if (retryCount === 5) {
@@ -801,16 +926,17 @@
           if (retryCount === 15) {
             clearInterval(setDynamicDeeplink);
             window.location.href =
-              open || "https://app.brightmoney.co/?deeplink_fetched=false";
+              open || 'https://app.brightmoney.co/?deeplink_fetched=false';
           }
         }, 500);
       }
     }
   };
+
   window.onscroll = (event) => {
     if (!userHasScrolled && window.scrollY > window.innerHeight) {
       userHasScrolled = true;
-      sendAnalyticsCall("LANDING_PAGE_USER_SCROLLED", {
+      sendAnalyticsCall('LANDING_PAGE_USER_SCROLLED', {
         page: page,
         ...(utm || {}),
         fbp,
